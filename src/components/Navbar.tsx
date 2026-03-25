@@ -66,24 +66,24 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Link
+              <a
                 href="#features"
                 className="text-sm text-gray-400 hover:text-white transition-colors"
               >
                 Features
-              </Link>
-              <Link
+              </a>
+              <a
                 href="#pricing"
                 className="text-sm text-gray-400 hover:text-white transition-colors"
               >
                 Pricing
-              </Link>
-              <Link
+              </a>
+              <a
                 href="#how-it-works"
                 className="text-sm text-gray-400 hover:text-white transition-colors"
               >
                 How it works
-              </Link>
+              </a>
             </>
           )}
         </div>
@@ -146,20 +146,20 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Link
+              <a
                 href="#features"
                 className="block text-sm text-gray-400"
                 onClick={() => setIsOpen(false)}
               >
                 Features
-              </Link>
-              <Link
+              </a>
+              <a
                 href="#pricing"
                 className="block text-sm text-gray-400"
                 onClick={() => setIsOpen(false)}
               >
                 Pricing
-              </Link>
+              </a>
               <Link
                 href="/dashboard"
                 className="flex items-center gap-2 text-sm text-gray-400"

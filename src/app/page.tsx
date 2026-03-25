@@ -117,7 +117,7 @@ export default function HomePage() {
       </section>
 
       {/* ── How It Works ── */}
-      <section id="how-it-works" className="section-padding bg-dark-800/50">
+      <section id="how-it-works" className="scroll-mt-20 section-padding bg-dark-800/50">
         <div className="mx-auto max-w-5xl">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-white mb-4">
@@ -172,7 +172,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Features ── */}
-      <section id="features" className="section-padding">
+      <section id="features" className="scroll-mt-20 section-padding">
         <div className="mx-auto max-w-5xl">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-white mb-4">
@@ -261,7 +261,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Pricing ── */}
-      <section id="pricing" className="section-padding bg-dark-800/50">
+      <section id="pricing" className="scroll-mt-20 section-padding bg-dark-800/50">
         <div className="mx-auto max-w-5xl">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-white mb-4">

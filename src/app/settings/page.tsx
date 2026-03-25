@@ -77,7 +77,7 @@ export default function SettingsPage() {
     <main className="min-h-screen bg-dark-900">
       <Navbar />
 
-      <div className="mx-auto max-w-2xl px-6 py-10">
+      <div className="mx-auto max-w-2xl px-6 pt-24 pb-10">
         <div className="mb-10">
           <h1 className="text-2xl font-bold text-white mb-1">Settings</h1>
           <p className="text-sm text-gray-500">

@@ -326,7 +326,7 @@ export default function GeneratePage() {
     <main className="min-h-screen bg-dark-900">
       <Navbar />
 
-      <div className="mx-auto max-w-5xl px-6 py-10">
+      <div className="mx-auto max-w-5xl px-6 pt-24 pb-10">
         {!result ? (
           /* ── Input Form ── */
           <div className="max-w-3xl mx-auto">

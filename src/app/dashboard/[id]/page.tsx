@@ -257,7 +257,7 @@ export default function DocumentDetailPage() {
         </div>
       )}
 
-      <div className="mx-auto max-w-5xl px-6 py-10">
+      <div className="mx-auto max-w-5xl px-6 pt-24 pb-10">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <h2 className="text-2xl font-bold text-white mb-1">
