@@ -27,6 +27,7 @@ import {
   type SavedDocument,
   type BusinessSettings,
 } from "@/lib/store";
+import { getAuthUserId, syncDocumentToCloud } from "@/lib/supabase/sync";
 
 const CATEGORIES = [
   { value: "designer", label: "Designer", icon: Palette },
@@ -156,6 +157,11 @@ export default function GeneratePage() {
       };
       saveDocument(savedDoc);
       setMonthlyUsage((p) => p + 1);
+
+      // Cloud sync if logged in
+      getAuthUserId().then((userId) => {
+        if (userId) syncDocumentToCloud(userId, savedDoc);
+      });
 
       setResult({
         ...data,

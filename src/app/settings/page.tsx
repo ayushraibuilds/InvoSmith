@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getSettings, saveSettings, exportAllData, importAllData, type BusinessSettings, type BillCraftExport } from "@/lib/store";
+import { getAuthUserId, syncSettingsToCloud } from "@/lib/supabase/sync";
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/components/Toast";
 
@@ -37,11 +38,17 @@ export default function SettingsPage() {
     setSaved(false);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     saveSettings(formData);
     setSaved(true);
     toast("Settings saved", "success");
     setTimeout(() => setSaved(false), 3000);
+
+    // Cloud sync if logged in
+    const userId = await getAuthUserId();
+    if (userId) {
+      await syncSettingsToCloud(userId, formData);
+    }
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

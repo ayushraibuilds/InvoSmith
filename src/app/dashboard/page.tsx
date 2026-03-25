@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   FileText,
@@ -10,6 +10,7 @@ import {
   TrendingUp,
   IndianRupee,
   BarChart3,
+  Cloud,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
@@ -17,6 +18,7 @@ import {
   getMonthlyUsage,
   type SavedDocument,
 } from "@/lib/store";
+import { getAuthUserId, mergeLocalAndCloud } from "@/lib/supabase/sync";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-gray-500/15 text-gray-400",
@@ -26,7 +28,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const [documents] = useState<SavedDocument[]>(() => {
+  const [documents, setDocuments] = useState<SavedDocument[]>(() => {
     if (typeof window === "undefined") return [];
     return getDocuments();
   });
@@ -35,6 +37,30 @@ export default function DashboardPage() {
     if (typeof window === "undefined") return 0;
     return getMonthlyUsage();
   });
+  const [syncing, setSyncing] = useState(false);
+
+  const syncCloud = useCallback(async () => {
+    const userId = await getAuthUserId();
+    if (!userId) return;
+
+    setSyncing(true);
+    try {
+      const merged = await mergeLocalAndCloud(userId, getDocuments());
+      setDocuments(merged);
+      // Also persist merged list to localStorage
+      if (typeof window !== "undefined") {
+        localStorage.setItem("billcraft_documents", JSON.stringify(merged.slice(0, 200)));
+      }
+    } catch (e) {
+      console.error("Cloud sync error:", e);
+    }
+    setSyncing(false);
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    syncCloud();
+  }, [syncCloud]);
 
   const filtered = documents.filter(
     (doc) =>
@@ -81,6 +107,12 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-white mb-1">Dashboard</h1>
           <p className="text-sm text-gray-500">
             Your documents and billing overview
+            {syncing && (
+              <span className="ml-2 inline-flex items-center gap-1 text-amber-400">
+                <Cloud className="w-3.5 h-3.5 animate-pulse" />
+                Syncing...
+              </span>
+            )}
           </p>
         </div>
 

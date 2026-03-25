@@ -23,6 +23,7 @@ import {
 import { useToast } from "@/components/Toast";
 import Navbar from "@/components/Navbar";
 import type { InvoiceOutput, ProposalOutput } from "@/lib/ai/schema";
+import { getAuthUserId, deleteDocumentFromCloud } from "@/lib/supabase/sync";
 
 export default function DocumentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -143,10 +144,17 @@ export default function DocumentDetailPage() {
 </body></html>`;
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!doc) return;
     deleteDocument(doc.id);
     toast("Document deleted", "success");
+
+    // Cloud sync if logged in
+    const userId = await getAuthUserId();
+    if (userId) {
+      await deleteDocumentFromCloud(doc.id);
+    }
+
     router.push("/dashboard");
   };
 

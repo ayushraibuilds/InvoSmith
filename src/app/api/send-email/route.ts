@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { rateLimit } from "@/lib/rate-limit";
 import { generatePDFBuffer, type PDFData, type BusinessInfo } from "@/lib/pdf-generator";
+import { createClient } from "@/lib/supabase/server";
 
 const getResendClient = () => {
   const apiKey = process.env.RESEND_API_KEY;
@@ -20,10 +21,15 @@ function sanitizeHtml(html: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limit: 5 emails per hour per IP
+    // Check if user is authenticated
+    const supabase = await createClient();
+    const user = supabase ? (await supabase.auth.getUser()).data.user : null;
+    const isAuthenticated = !!user;
+
+    // Rate limit: authenticated = 5/hr, unauthenticated = 2/hr
     const rateLimitResponse = rateLimit(request, {
       windowMs: 60 * 60 * 1000,
-      maxRequests: 5,
+      maxRequests: isAuthenticated ? 5 : 2,
       prefix: "email",
     });
     if (rateLimitResponse) return rateLimitResponse;
