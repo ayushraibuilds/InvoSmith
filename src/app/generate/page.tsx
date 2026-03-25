@@ -51,6 +51,28 @@ const EXAMPLE_INPUTS = {
 
 const FREE_LIMIT = 3;
 
+const INDIAN_STATES = [
+  { code: "01", name: "Jammu & Kashmir" }, { code: "02", name: "Himachal Pradesh" },
+  { code: "03", name: "Punjab" }, { code: "04", name: "Chandigarh" },
+  { code: "05", name: "Uttarakhand" }, { code: "06", name: "Haryana" },
+  { code: "07", name: "Delhi" }, { code: "08", name: "Rajasthan" },
+  { code: "09", name: "Uttar Pradesh" }, { code: "10", name: "Bihar" },
+  { code: "11", name: "Sikkim" }, { code: "12", name: "Arunachal Pradesh" },
+  { code: "13", name: "Nagaland" }, { code: "14", name: "Manipur" },
+  { code: "15", name: "Mizoram" }, { code: "16", name: "Tripura" },
+  { code: "17", name: "Meghalaya" }, { code: "18", name: "Assam" },
+  { code: "19", name: "West Bengal" }, { code: "20", name: "Jharkhand" },
+  { code: "21", name: "Odisha" }, { code: "22", name: "Chhattisgarh" },
+  { code: "23", name: "Madhya Pradesh" }, { code: "24", name: "Gujarat" },
+  { code: "25", name: "Daman & Diu" }, { code: "26", name: "Dadra & Nagar Haveli" },
+  { code: "27", name: "Maharashtra" }, { code: "29", name: "Karnataka" },
+  { code: "30", name: "Goa" }, { code: "31", name: "Lakshadweep" },
+  { code: "32", name: "Kerala" }, { code: "33", name: "Tamil Nadu" },
+  { code: "34", name: "Puducherry" }, { code: "35", name: "Andaman & Nicobar" },
+  { code: "36", name: "Telangana" }, { code: "37", name: "Andhra Pradesh" },
+  { code: "38", name: "Ladakh" },
+];
+
 export default function GeneratePage() {
   const [inputText, setInputText] = useState("");
   const [documentType, setDocumentType] = useState<"invoice" | "proposal">("invoice");
@@ -67,6 +89,7 @@ export default function GeneratePage() {
   const [settings, setSettings] = useState<BusinessSettings | null>(null);
   const [monthlyUsage, setMonthlyUsage] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [clientStateCode, setClientStateCode] = useState("");
 
   useEffect(() => {
     setSettings(getSettings());
@@ -99,7 +122,7 @@ export default function GeneratePage() {
           business_name: settings?.business_name,
           gstin: settings?.gstin,
           state_code: settings?.state_code,
-          client_state_code: "", // TODO: add client state input
+          client_state_code: clientStateCode,
         }),
       });
 
@@ -385,6 +408,23 @@ export default function GeneratePage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Client State Code (for GST) */}
+            <div className="mb-6">
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                Client&apos;s State <span className="normal-case text-gray-600">(for GST calculation)</span>
+              </label>
+              <select
+                value={clientStateCode}
+                onChange={(e) => setClientStateCode(e.target.value)}
+                className="w-full bg-dark-700 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/40 transition-all appearance-none"
+              >
+                <option value="">Same state as mine (intra-state)</option>
+                {INDIAN_STATES.map((s) => (
+                  <option key={s.code} value={s.code}>{s.code} — {s.name}</option>
+                ))}
+              </select>
             </div>
 
             {/* Text Input */}

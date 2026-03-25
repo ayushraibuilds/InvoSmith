@@ -28,7 +28,7 @@ export default function DocumentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { toast } = useToast();
-  const [doc, setDoc] = useState<SavedDocument | null>(() => {
+  const [doc] = useState<SavedDocument | null>(() => {
     if (typeof window === "undefined") return null;
     const docs = getDocuments();
     return docs.find((d) => d.id === id) || null;
