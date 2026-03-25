@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateDocument } from "@/lib/ai/generate";
 import { generateInputSchema } from "@/lib/ai/schema";
 import { calculateGST, isInterStateTransaction } from "@/lib/gst";
+import { rateLimit } from "@/lib/rate-limit";
 import type { InvoiceOutput, ProposalOutput } from "@/lib/ai/schema";
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 10 requests/minute per IP
+    const rateLimitResponse = rateLimit(request);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const body = await request.json();
 
     // Validate input
