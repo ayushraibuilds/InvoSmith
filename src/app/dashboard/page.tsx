@@ -129,19 +129,19 @@ export default function DashboardPage() {
         </div>
 
         {/* Documents */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-amber-500/60" />
             Recent Documents
           </h2>
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-gray-600 w-56 focus:outline-none focus:border-amber-500/30"
+              className="bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-gray-600 w-full sm:w-56 focus:outline-none focus:border-amber-500/30"
             />
           </div>
         </div>
@@ -149,16 +149,17 @@ export default function DashboardPage() {
         {filtered.length > 0 ? (
           <div className="space-y-3">
             {filtered.map((doc) => (
-              <div
+              <Link
                 key={doc.id}
-                className="glass-card glass-card-hover p-5 flex items-center justify-between"
+                href={`/dashboard/${doc.id}`}
+                className="glass-card glass-card-hover p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 block"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 min-w-0">
                   <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
                     <FileText className="w-5 h-5 text-amber-400" />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-0.5">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                       <span className="text-sm font-semibold text-white">
                         {doc.client_name}
                       </span>
@@ -191,7 +192,7 @@ export default function DashboardPage() {
                     {doc.status}
                   </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         ) : documents.length === 0 ? (

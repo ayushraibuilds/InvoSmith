@@ -131,73 +131,123 @@ export async function generateDocument(
   };
 }
 
+// ── Extract basic info from user input for smarter mock ──
+function parseInputBasics(text: string) {
+  // Extract client name: "Rohit ke liye" or "for Rohit" or "Priya ki company"
+  const namePatterns = [
+    /(\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)?)\s+ke?\s+liye/i,
+    /for\s+(\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/i,
+    /(\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)?)\s+ki?\s+/i,
+  ];
+  let clientName = "Your Client";
+  for (const pattern of namePatterns) {
+    const match = text.match(pattern);
+    if (match?.[1] && match[1].length > 2) {
+      clientName = match[1];
+      break;
+    }
+  }
+
+  // Extract amounts: "45k", "45000", "1.2 lakh", "₹80,000"
+  const amounts: number[] = [];
+  const amountPatterns = [
+    /(\d+(?:\.\d+)?)\s*(?:lakh|lac)/gi,
+    /(\d+(?:\.\d+)?)\s*k\b/gi,
+    /₹?\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?)/g,
+  ];
+  const multipliers = [100000, 1000, 1];
+  amountPatterns.forEach((pattern, idx) => {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      const num = parseFloat(match[1].replace(/,/g, "")) * multipliers[idx];
+      if (num >= 100 && num <= 100000000) amounts.push(num);
+    }
+  });
+
+  const total = amounts.length > 0 ? Math.max(...amounts) : 25000;
+
+  // Extract advance: "advance paid", "booking advance"
+  let advancePaid = 0;
+  const advanceMatch = text.match(/(\d+)\s*%\s*advance/i);
+  if (advanceMatch) {
+    advancePaid = Math.round(total * parseInt(advanceMatch[1]) / 100);
+  } else if (amounts.length > 1) {
+    // Second amount might be advance
+    const possibleAdvance = Math.min(...amounts);
+    if (possibleAdvance < total) advancePaid = possibleAdvance;
+  }
+
+  return { clientName, total, advancePaid };
+}
+
 // ── Mock Data (for when no API keys are configured) ──
 function generateMockData(
   input: GenerateInput
 ): InvoiceOutput | ProposalOutput {
+  const { clientName, total, advancePaid } = parseInputBasics(input.input_text);
+  const gstAmount = Math.round(total * 0.18);
+  const grandTotal = total + gstAmount;
+  const balanceDue = grandTotal - advancePaid;
+
+  const categoryLabels: Record<string, string> = {
+    designer: "Design Services",
+    developer: "Development Services",
+    consultant: "Consulting Services",
+    photographer: "Photography Services",
+    writer: "Content Writing Services",
+  };
+  const serviceLabel = categoryLabels[input.service_category] || "Professional Services";
+
   if (input.document_type === "invoice") {
     return {
-      client_name: "Sample Client",
-      client_company: "Sample Company Pvt Ltd",
-      services: ["Professional Services"],
+      client_name: clientName,
+      client_company: "",
+      services: [serviceLabel],
       line_items: [
         {
-          description: "Professional Service Delivery",
-          details: "As discussed and agreed upon",
+          description: serviceLabel,
+          details: "As per project scope discussed",
           quantity: 1,
-          rate: 25000,
-          amount: 25000,
+          rate: total,
+          amount: total,
         },
       ],
-      subtotal: 25000,
+      subtotal: total,
       gst_rate: 18,
-      gst_amount: 4500,
-      total: 29500,
-      advance_paid: 0,
-      balance_due: 29500,
+      gst_amount: gstAmount,
+      total: grandTotal,
+      advance_paid: advancePaid,
+      balance_due: balanceDue,
       payment_terms: "Due on receipt",
       notes:
-        "Thank you for your business. Please connect your AI API key (Gemini or Groq) for real AI-powered generation.",
+        "⚡ This is demo data — connect your Gemini or Groq API key for AI-powered generation that structures your actual project details.",
     } satisfies InvoiceOutput;
   }
 
   return {
-    client_name: "Sample Client",
-    client_company: "Sample Company Pvt Ltd",
-    project_title: "Professional Project Proposal",
+    client_name: clientName,
+    client_company: "",
+    project_title: `${serviceLabel} Proposal`,
     professional_intro:
-      "Thank you for considering our services. We are excited about the opportunity to work together on this project.",
+      `Thank you for considering our ${serviceLabel.toLowerCase()}. We look forward to delivering a solution tailored to your needs.`,
     scope_description:
-      "This proposal outlines our approach to delivering a comprehensive solution tailored to your needs. Please connect your AI API key for real AI-powered generation.",
+      "This proposal covers the full project scope as discussed. Connect your AI API key for a detailed scope breakdown from your project description.",
     deliverables: [
-      "Complete project delivery",
-      "Documentation",
-      "Post-delivery support",
+      "Complete project delivery as specified",
+      "All source files and documentation",
+      "Post-delivery support (1 round of revisions)",
     ],
     timeline: [
-      {
-        phase: "Phase 1",
-        duration: "1-2 weeks",
-        description: "Planning and initial development",
-      },
-      {
-        phase: "Phase 2",
-        duration: "2-3 weeks",
-        description: "Core development and delivery",
-      },
+      { phase: "Phase 1 — Planning", duration: "1 week", description: "Requirements finalization and planning" },
+      { phase: "Phase 2 — Execution", duration: "2-3 weeks", description: "Core work and delivery" },
     ],
     line_items: [
-      {
-        description: "Project Development",
-        quantity: 1,
-        rate: 50000,
-        amount: 50000,
-      },
+      { description: serviceLabel, quantity: 1, rate: total, amount: total },
     ],
-    subtotal: 50000,
+    subtotal: total,
     gst_rate: 18,
-    gst_amount: 9000,
-    total: 59000,
+    gst_amount: gstAmount,
+    total: grandTotal,
     payment_terms: "50% advance, 50% on delivery",
     validity: "15 days",
     terms_and_conditions: [

@@ -1,0 +1,317 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  FileText,
+  ArrowLeft,
+  Download,
+  CheckCircle2,
+  Loader2,
+} from "lucide-react";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import {
+  getDocuments,
+  getSettings,
+  type SavedDocument,
+  type BusinessSettings,
+} from "@/lib/store";
+import type { InvoiceOutput, ProposalOutput } from "@/lib/ai/schema";
+
+export default function DocumentDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const [doc, setDoc] = useState<SavedDocument | null>(null);
+  const [settings, setSettings] = useState<BusinessSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const docs = getDocuments();
+    const found = docs.find((d) => d.id === id);
+    setDoc(found || null);
+    setSettings(getSettings());
+    setLoading(false);
+  }, [id]);
+
+  const handleDownloadPDF = () => {
+    if (!doc) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const businessName = settings?.business_name || "Your Business";
+    const isInvoice = doc.type === "invoice";
+    const data = doc.output_json;
+
+    const lineItemsHTML = data.line_items
+      .map(
+        (item) => `
+      <tr>
+        <td style="padding:10px 0;border-bottom:1px solid #eee;">
+          <div style="font-weight:500;">${item.description}</div>
+          ${item.details ? `<div style="font-size:12px;color:#888;margin-top:2px;">${item.details}</div>` : ""}
+        </td>
+        <td style="padding:10px 0;border-bottom:1px solid #eee;text-align:center;">${item.quantity}</td>
+        <td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;">₹${item.rate.toLocaleString("en-IN")}</td>
+        <td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;font-weight:500;">₹${item.amount.toLocaleString("en-IN")}</td>
+      </tr>`
+      )
+      .join("");
+
+    const invoiceData = data as InvoiceOutput;
+    const proposalData = data as ProposalOutput;
+
+    const paymentInfo = settings?.bank_name
+      ? `<div style="margin-top:24px;padding:16px;background:#f8f8f8;border-radius:8px;font-size:13px;">
+          <div style="font-weight:600;margin-bottom:8px;">Payment Details</div>
+          ${settings.bank_name ? `<div>Bank: ${settings.bank_name}</div>` : ""}
+          ${settings.bank_account_name ? `<div>A/C Name: ${settings.bank_account_name}</div>` : ""}
+          ${settings.bank_account_number ? `<div>A/C No: ${settings.bank_account_number}</div>` : ""}
+          ${settings.bank_ifsc ? `<div>IFSC: ${settings.bank_ifsc}</div>` : ""}
+          ${settings.upi_id ? `<div>UPI: ${settings.upi_id}</div>` : ""}
+        </div>`
+      : "";
+
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${doc.document_number} — ${businessName}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; color:#222; padding:40px; max-width:800px; margin:0 auto; }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; font-size:12px; text-transform:uppercase; color:#888; padding:8px 0; border-bottom:2px solid #222; }
+  th:nth-child(2) { text-align:center; }
+  th:nth-child(3), th:nth-child(4) { text-align:right; }
+  @media print { body { padding:20px; } }
+</style></head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:24px;border-bottom:2px solid #222;">
+    <div>
+      ${settings?.logo_base64 ? `<img src="${settings.logo_base64}" alt="Logo" style="height:48px;margin-bottom:8px;">` : ""}
+      <div style="font-size:20px;font-weight:700;">${businessName}</div>
+      ${settings?.address ? `<div style="font-size:12px;color:#666;margin-top:4px;">${settings.address}</div>` : ""}
+      ${settings?.gstin ? `<div style="font-size:12px;color:#666;">GSTIN: ${settings.gstin}</div>` : ""}
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:14px;font-weight:600;background:#f5f0e0;color:#854F0B;display:inline-block;padding:4px 12px;border-radius:20px;margin-bottom:8px;">${doc.document_number}</div>
+      <div style="font-size:24px;font-weight:700;margin-top:4px;">${isInvoice ? "INVOICE" : "PROPOSAL"}</div>
+      <div style="font-size:12px;color:#888;">Date: ${formatDate(new Date(doc.created_at))}</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
+    <div>
+      <div style="font-size:11px;text-transform:uppercase;color:#888;margin-bottom:4px;">Bill To</div>
+      <div style="font-weight:600;">${data.client_name}</div>
+      ${data.client_company ? `<div style="color:#666;">${data.client_company}</div>` : ""}
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:11px;text-transform:uppercase;color:#888;margin-bottom:4px;">Payment Terms</div>
+      <div>${isInvoice ? invoiceData.payment_terms : proposalData.payment_terms}</div>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+    <tbody>${lineItemsHTML}</tbody>
+  </table>
+
+  <div style="margin-top:16px;border-top:2px solid #222;padding-top:12px;">
+    <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;"><span>Subtotal</span><span>₹${data.subtotal.toLocaleString("en-IN")}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;"><span>GST (${data.gst_rate}%)</span><span>₹${data.gst_amount.toLocaleString("en-IN")}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:16px;font-weight:700;border-top:1px solid #ddd;margin-top:4px;"><span>Total</span><span>₹${data.total.toLocaleString("en-IN")}</span></div>
+    ${isInvoice && invoiceData.advance_paid > 0 ? `
+    <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;color:#059669;"><span>Advance Paid</span><span>-₹${invoiceData.advance_paid.toLocaleString("en-IN")}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:10px 16px;font-size:18px;font-weight:700;background:#f5f0e0;color:#854F0B;border-radius:8px;margin-top:8px;"><span>Balance Due</span><span>₹${invoiceData.balance_due.toLocaleString("en-IN")}</span></div>` : ""}
+  </div>
+  ${paymentInfo}
+  <div style="text-align:center;margin-top:40px;padding-top:16px;border-top:1px solid #eee;font-size:11px;color:#bbb;">Generated by BillCraft · billcraft.vercel.app</div>
+</body></html>`;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 500);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-dark-900 flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!doc) {
+    return (
+      <div className="min-h-screen bg-dark-900 flex items-center justify-center px-6">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-white mb-2">Document not found</h2>
+          <p className="text-sm text-gray-500 mb-6">This document may have been deleted or doesn&apos;t exist.</p>
+          <Link href="/dashboard" className="btn-primary inline-flex items-center gap-2 text-sm">
+            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const data = doc.output_json;
+  const isInvoice = doc.type === "invoice";
+
+  return (
+    <main className="min-h-screen bg-dark-900">
+      <nav className="border-b border-white/5 bg-dark-900/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+              <FileText className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-lg font-bold text-white">
+              Bill<span className="gradient-text">Craft</span>
+            </span>
+          </Link>
+          <Link href="/dashboard" className="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-1.5">
+            <ArrowLeft className="w-3.5 h-3.5" /> Dashboard
+          </Link>
+        </div>
+      </nav>
+
+      <div className="mx-auto max-w-5xl px-6 py-10">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-1">
+              {isInvoice ? "Invoice" : "Proposal"} — {doc.client_name}
+            </h2>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-xs font-medium bg-amber-500/15 text-amber-400 px-2.5 py-1 rounded-full">
+                {doc.document_number}
+              </span>
+              <span className="text-xs text-gray-500">{formatDate(new Date(doc.created_at))}</span>
+              <span className="text-xs text-gray-600 capitalize">{doc.service_category}</span>
+            </div>
+          </div>
+          <button
+            onClick={handleDownloadPDF}
+            className="btn-primary flex items-center gap-2 text-sm !py-2.5 !px-5"
+          >
+            <Download className="w-4 h-4" /> Download PDF
+          </button>
+        </div>
+
+        <div className="glass-card p-8 max-w-3xl mx-auto">
+          {/* Header */}
+          <div className="flex justify-between items-start mb-8 pb-6 border-b border-white/10">
+            <div>
+              {settings?.logo_base64 && (
+                <img src={settings.logo_base64} alt="Logo" className="h-10 mb-2 rounded" />
+              )}
+              <h3 className="text-xl font-bold text-white mb-0.5">
+                {settings?.business_name || "Your Business Name"}
+              </h3>
+              {settings?.address && <p className="text-xs text-gray-500">{settings.address}</p>}
+              {settings?.gstin && <p className="text-xs text-gray-500">GSTIN: {settings.gstin}</p>}
+            </div>
+            <div className="text-right">
+              <span className="inline-block bg-amber-500/15 text-amber-400 text-xs font-medium px-3 py-1.5 rounded-full mb-2">
+                {doc.document_number}
+              </span>
+              <p className="text-2xl font-bold text-white">{isInvoice ? "INVOICE" : "PROPOSAL"}</p>
+              <p className="text-xs text-gray-500">{formatDate(new Date(doc.created_at))}</p>
+            </div>
+          </div>
+
+          {/* Client info */}
+          <div className="grid grid-cols-2 gap-6 mb-8">
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Bill To</p>
+              <p className="text-sm font-semibold text-white">{data.client_name}</p>
+              {data.client_company && <p className="text-sm text-gray-400">{data.client_company}</p>}
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Payment Terms</p>
+              <p className="text-sm text-gray-300">
+                {isInvoice ? (data as InvoiceOutput).payment_terms : (data as ProposalOutput).payment_terms}
+              </p>
+            </div>
+          </div>
+
+          {/* Proposal-specific */}
+          {!isInvoice && (
+            <>
+              <div className="mb-6">
+                <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Project</h4>
+                <p className="text-base font-semibold text-white mb-2">{(data as ProposalOutput).project_title}</p>
+                <p className="text-sm text-gray-300 leading-relaxed">{(data as ProposalOutput).professional_intro}</p>
+              </div>
+              <div className="mb-6">
+                <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Deliverables</h4>
+                <div className="space-y-2">
+                  {(data as ProposalOutput).deliverables.map((d, i) => (
+                    <div key={i} className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                      <span className="text-sm text-gray-300">{d}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Line items */}
+          <div className="mb-6">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase pb-3">Description</th>
+                  <th className="text-right text-xs font-medium text-gray-500 uppercase pb-3">Qty</th>
+                  <th className="text-right text-xs font-medium text-gray-500 uppercase pb-3">Rate</th>
+                  <th className="text-right text-xs font-medium text-gray-500 uppercase pb-3">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.line_items.map((item, i) => (
+                  <tr key={i} className="border-b border-white/5">
+                    <td className="py-3">
+                      <p className="text-sm text-white">{item.description}</p>
+                      {item.details && <p className="text-xs text-gray-500 mt-0.5">{item.details}</p>}
+                    </td>
+                    <td className="text-right text-sm text-gray-400 py-3">{item.quantity}</td>
+                    <td className="text-right text-sm text-gray-400 py-3">{formatCurrency(item.rate)}</td>
+                    <td className="text-right text-sm text-white font-medium py-3">{formatCurrency(item.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Totals */}
+          <div className="border-t border-white/10 pt-4 space-y-2">
+            <div className="flex justify-between text-sm"><span className="text-gray-400">Subtotal</span><span className="text-white">{formatCurrency(data.subtotal)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-gray-400">GST ({data.gst_rate}%)</span><span className="text-white">{formatCurrency(data.gst_amount)}</span></div>
+            <div className="flex justify-between text-sm font-semibold border-t border-white/10 pt-2"><span className="text-white">Total</span><span className="text-white">{formatCurrency(data.total)}</span></div>
+            {isInvoice && (data as InvoiceOutput).advance_paid > 0 && (
+              <div className="flex justify-between text-sm"><span className="text-gray-400">Advance Paid</span><span className="text-emerald-500">-{formatCurrency((data as InvoiceOutput).advance_paid)}</span></div>
+            )}
+            {isInvoice && (
+              <div className="flex justify-between text-base font-bold bg-amber-500/10 rounded-xl px-4 py-3 mt-2">
+                <span className="text-white">Balance Due</span>
+                <span className="text-amber-400">{formatCurrency((data as InvoiceOutput).balance_due)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Payment Details */}
+          {settings?.bank_name && (
+            <div className="mt-6 pt-4 border-t border-white/5">
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Payment Details</p>
+              <div className="text-sm text-gray-400 space-y-1">
+                {settings.bank_name && <p>Bank: {settings.bank_name}</p>}
+                {settings.bank_account_number && <p>A/C: {settings.bank_account_number}</p>}
+                {settings.bank_ifsc && <p>IFSC: {settings.bank_ifsc}</p>}
+                {settings.upi_id && <p>UPI: {settings.upi_id}</p>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
