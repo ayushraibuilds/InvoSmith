@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import type { SavedDocument, BusinessSettings } from "@/lib/store";
+import type { SavedDocument, BusinessSettings, Client } from "@/lib/store";
 
 /**
  * Get authenticated user ID (client-side).
@@ -202,5 +202,101 @@ export async function mergeLocalAndCloud(
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
+  return merged;
+}
+
+// ── Clients Sync ──
+
+/**
+ * Sync a single client to Supabase clients table.
+ */
+export async function syncClientToCloud(
+  userId: string,
+  client: Client
+): Promise<void> {
+  const supabase = createClient();
+  if (!supabase) return;
+
+  const { error } = await supabase.from("clients").upsert({
+    id: client.id,
+    user_id: userId,
+    name: client.name,
+    company: client.company,
+    email: client.email,
+    phone: client.phone,
+    address: client.address,
+    gstin: client.gstin,
+    state_code: client.state_code,
+    created_at: client.created_at,
+  });
+
+  if (error) {
+    console.error("Sync client error:", error.message);
+  }
+}
+
+/**
+ * Fetch all clients from Supabase for the logged-in user.
+ */
+export async function fetchCloudClients(userId: string): Promise<Client[]> {
+  const supabase = createClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("clients")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((row) => ({
+    id: row.id,
+    name: row.name,
+    company: row.company || "",
+    email: row.email || "",
+    phone: row.phone || "",
+    address: row.address || "",
+    gstin: row.gstin || "",
+    state_code: row.state_code || "",
+    created_at: row.created_at,
+  }));
+}
+
+/**
+ * Delete a client from Supabase.
+ */
+export async function deleteClientFromCloud(clientId: string): Promise<void> {
+  const supabase = createClient();
+  if (!supabase) return;
+
+  const { error } = await supabase.from("clients").delete().eq("id", clientId);
+  if (error) {
+    console.error("Delete cloud client error:", error.message);
+  }
+}
+
+/**
+ * Merge local clients with cloud clients.
+ * Returns merged list (newest first), and syncs local-only to cloud.
+ */
+export async function mergeLocalAndCloudClients(
+  userId: string,
+  localClients: Client[]
+): Promise<Client[]> {
+  const cloudClients = await fetchCloudClients(userId);
+  const cloudIds = new Set(cloudClients.map((c) => c.id));
+
+  // Upload any local-only clients to Supabase
+  const localOnly = localClients.filter((c) => !cloudIds.has(c.id));
+  for (const client of localOnly) {
+    await syncClientToCloud(userId, client);
+  }
+
+  const merged = [...cloudClients, ...localOnly];
+  merged.sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
   return merged;
 }

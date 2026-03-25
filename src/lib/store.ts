@@ -1,6 +1,17 @@
 import type { InvoiceOutput, ProposalOutput } from "@/lib/ai/schema";
 
 // ── Types ──
+export interface Client {
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  address: string;
+  gstin: string;
+  state_code: string;
+  created_at: string;
+}
 export interface BusinessSettings {
   full_name: string;
   business_name: string;
@@ -36,6 +47,7 @@ export interface SavedDocument {
 // ── Keys ──
 const SETTINGS_KEY = "billcraft_settings";
 const DOCUMENTS_KEY = "billcraft_documents";
+const CLIENTS_KEY = "billcraft_clients";
 const DOC_COUNTER_KEY = "billcraft_doc_counter";
 
 // ── Settings ──
@@ -118,6 +130,39 @@ export function deleteDocument(id: string): boolean {
   return true;
 }
 
+// ── Clients ──
+export function getClients(): Client[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CLIENTS_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export function saveClient(client: Client): void {
+  if (typeof window === "undefined") return;
+  const clients = getClients();
+  const existingIdx = clients.findIndex((c) => c.id === client.id);
+  if (existingIdx !== -1) {
+    clients[existingIdx] = client;
+  } else {
+    clients.unshift(client); // newest first
+  }
+  localStorage.setItem(CLIENTS_KEY, JSON.stringify(clients));
+}
+
+export function deleteClient(id: string): boolean {
+  if (typeof window === "undefined") return false;
+  const clients = getClients();
+  const filtered = clients.filter((c) => c.id !== id);
+  if (filtered.length === clients.length) return false;
+  localStorage.setItem(CLIENTS_KEY, JSON.stringify(filtered));
+  return true;
+}
+
 // ── Document Counter ──
 export function getNextDocumentNumber(type: "invoice" | "proposal"): string {
   if (typeof window === "undefined") return type === "invoice" ? "INV-2026-001" : "PROP-2026-001";
@@ -153,6 +198,7 @@ export interface BillCraftExport {
   exported_at: string;
   settings: BusinessSettings;
   documents: SavedDocument[];
+  clients: Client[];
   doc_counters: { invoice: number; proposal: number };
 }
 
@@ -170,6 +216,7 @@ export function exportAllData(): BillCraftExport {
     exported_at: new Date().toISOString(),
     settings,
     documents,
+    clients: getClients(),
     doc_counters: docCounters,
   };
 }
@@ -207,6 +254,19 @@ export function importAllData(data: BillCraftExport): { imported: number; skippe
     };
     localStorage.setItem(DOC_COUNTER_KEY, JSON.stringify(merged));
   } catch { /* empty */ }
+
+  // Import clients
+  if (data.clients && Array.isArray(data.clients)) {
+    const existingClients = getClients();
+    const existingClientIds = new Set(existingClients.map((c) => c.id));
+    for (const client of data.clients) {
+      if (!existingClientIds.has(client.id)) {
+        existingClients.push(client);
+      }
+    }
+    existingClients.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    localStorage.setItem(CLIENTS_KEY, JSON.stringify(existingClients));
+  }
 
   return { imported, skipped };
 }

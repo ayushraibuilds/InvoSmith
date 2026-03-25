@@ -18,16 +18,21 @@ import {
   Check,
 } from "lucide-react";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
-import type { InvoiceOutput, ProposalOutput } from "@/lib/ai/schema";
+import type { InvoiceOutput, ProposalOutput, DocumentOutput } from "@/lib/ai/schema";
 import {
   getSettings,
   saveDocument,
   getNextDocumentNumber,
   getMonthlyUsage,
+  getClients,
   type SavedDocument,
   type BusinessSettings,
+  type Client,
 } from "@/lib/store";
 import { getAuthUserId, syncDocumentToCloud } from "@/lib/supabase/sync";
+import { INDIAN_STATES } from "@/lib/constants";
+import EditableDocumentPreview from "@/components/EditableDocumentPreview";
+import { useRouter } from "next/navigation";
 
 const CATEGORIES = [
   { value: "designer", label: "Designer", icon: Palette },
@@ -52,27 +57,6 @@ const EXAMPLE_INPUTS = {
 
 const FREE_LIMIT = 3;
 
-const INDIAN_STATES = [
-  { code: "01", name: "Jammu & Kashmir" }, { code: "02", name: "Himachal Pradesh" },
-  { code: "03", name: "Punjab" }, { code: "04", name: "Chandigarh" },
-  { code: "05", name: "Uttarakhand" }, { code: "06", name: "Haryana" },
-  { code: "07", name: "Delhi" }, { code: "08", name: "Rajasthan" },
-  { code: "09", name: "Uttar Pradesh" }, { code: "10", name: "Bihar" },
-  { code: "11", name: "Sikkim" }, { code: "12", name: "Arunachal Pradesh" },
-  { code: "13", name: "Nagaland" }, { code: "14", name: "Manipur" },
-  { code: "15", name: "Mizoram" }, { code: "16", name: "Tripura" },
-  { code: "17", name: "Meghalaya" }, { code: "18", name: "Assam" },
-  { code: "19", name: "West Bengal" }, { code: "20", name: "Jharkhand" },
-  { code: "21", name: "Odisha" }, { code: "22", name: "Chhattisgarh" },
-  { code: "23", name: "Madhya Pradesh" }, { code: "24", name: "Gujarat" },
-  { code: "25", name: "Daman & Diu" }, { code: "26", name: "Dadra & Nagar Haveli" },
-  { code: "27", name: "Maharashtra" }, { code: "29", name: "Karnataka" },
-  { code: "30", name: "Goa" }, { code: "31", name: "Lakshadweep" },
-  { code: "32", name: "Kerala" }, { code: "33", name: "Tamil Nadu" },
-  { code: "34", name: "Puducherry" }, { code: "35", name: "Andaman & Nicobar" },
-  { code: "36", name: "Telangana" }, { code: "37", name: "Andhra Pradesh" },
-  { code: "38", name: "Ladakh" },
-];
 
 export default function GeneratePage() {
   const [inputText, setInputText] = useState("");
@@ -91,10 +75,16 @@ export default function GeneratePage() {
   const [monthlyUsage, setMonthlyUsage] = useState(0);
   const [copied, setCopied] = useState(false);
   const [clientStateCode, setClientStateCode] = useState("");
+  const [previewDoc, setPreviewDoc] = useState<SavedDocument | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>("new");
+  
+  const router = useRouter();
 
   useEffect(() => {
     setSettings(getSettings());
     setMonthlyUsage(getMonthlyUsage());
+    setClients(getClients());
   }, []);
 
   const handleGenerate = async () => {
@@ -113,6 +103,16 @@ export default function GeneratePage() {
     setResult(null);
 
     try {
+      let effectiveStateCode = clientStateCode;
+      let selectedClient: Client | undefined;
+      
+      if (selectedClientId !== "new") {
+        selectedClient = clients.find(c => c.id === selectedClientId);
+        if (selectedClient && selectedClient.state_code) {
+          effectiveStateCode = selectedClient.state_code;
+        }
+      }
+
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -123,7 +123,7 @@ export default function GeneratePage() {
           business_name: settings?.business_name,
           gstin: settings?.gstin,
           state_code: settings?.state_code,
-          client_state_code: clientStateCode,
+          client_state_code: effectiveStateCode,
         }),
       });
 
@@ -139,32 +139,39 @@ export default function GeneratePage() {
           ? (data.data as InvoiceOutput).balance_due
           : (data.data as ProposalOutput).total;
 
-      // Save to localStorage
+      // Merge selected client details into generated JSON if selected
+      const parsedData = data.data as DocumentOutput;
+      if (selectedClient) {
+        parsedData.client_name = selectedClient.name;
+        parsedData.client_company = selectedClient.company || "";
+        parsedData.client_email = selectedClient.email || "";
+        parsedData.client_phone = selectedClient.phone || "";
+        parsedData.client_address = selectedClient.address || "";
+        parsedData.client_gstin = selectedClient.gstin || "";
+        parsedData.client_state_code = selectedClient.state_code || "";
+      }
+
       const savedDoc: SavedDocument = {
         id: crypto.randomUUID(),
         type: documentType,
         service_category: serviceCategory,
         input_text: inputText,
-        output_json: data.data,
-        client_name:
-          data.data.client_name || "Unknown Client",
-        client_company: data.data.client_company,
+        output_json: parsedData,
+        client_name: parsedData.client_name || "Unknown Client",
+        client_company: parsedData.client_company,
         document_number: docNumber,
         amount,
         status: "draft",
         ai_provider: data.provider,
         created_at: new Date().toISOString(),
       };
-      saveDocument(savedDoc);
-      setMonthlyUsage((p) => p + 1);
 
-      // Cloud sync if logged in
-      getAuthUserId().then((userId) => {
-        if (userId) syncDocumentToCloud(userId, savedDoc);
-      });
+      // Enter revision workflow (don't save to DB yet)
+      setPreviewDoc(savedDoc);
 
       setResult({
         ...data,
+        data: parsedData,
         documentNumber: docNumber,
         isDemo: data.provider === "mock",
       });
@@ -175,8 +182,35 @@ export default function GeneratePage() {
     }
   };
 
+  const handleFinalizeSave = async (editedDoc: SavedDocument) => {
+    saveDocument(editedDoc);
+    setMonthlyUsage((p) => p + 1);
+
+    // Build the finalized result state
+    setResult({
+      data: editedDoc.output_json,
+      provider: editedDoc.ai_provider,
+      document_type: documentType,
+      documentNumber: editedDoc.document_number,
+      isDemo: result?.isDemo,
+    });
+    setPreviewDoc(null);
+
+    // Cloud sync wrapper
+    const userId = await getAuthUserId();
+    if (userId) {
+      syncDocumentToCloud(userId, editedDoc);
+    }
+    
+    // Auto-navigate to detail view after short delay to show success UI
+    setTimeout(() => {
+      router.push(`/dashboard/${editedDoc.id}`);
+    }, 1500);
+  };
+
   const handleReset = () => {
     setResult(null);
+    setPreviewDoc(null);
     setError(null);
     setInputText("");
   };
@@ -358,7 +392,13 @@ export default function GeneratePage() {
       <Navbar />
 
       <div className="mx-auto max-w-5xl px-6 pt-24 pb-10">
-        {!result ? (
+        {previewDoc ? (
+           <EditableDocumentPreview 
+             document={previewDoc} 
+             onSave={handleFinalizeSave} 
+             onCancel={() => { setPreviewDoc(null); setResult(null); }} 
+           />
+        ) : !result ? (
           /* ── Input Form ── */
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-10">
@@ -416,21 +456,41 @@ export default function GeneratePage() {
               </div>
             </div>
 
-            {/* Client State Code (for GST) */}
-            <div className="mb-6">
-              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
-                Client&apos;s State <span className="normal-case text-gray-600">(for GST calculation)</span>
-              </label>
-              <select
-                value={clientStateCode}
-                onChange={(e) => setClientStateCode(e.target.value)}
-                className="w-full bg-dark-700 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/40 transition-all appearance-none"
-              >
-                <option value="">Same state as mine (intra-state)</option>
-                {INDIAN_STATES.map((s) => (
-                  <option key={s.code} value={s.code}>{s.code} — {s.name}</option>
-                ))}
-              </select>
+            {/* Client Selection */}
+            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                  Select Client
+                </label>
+                <select
+                  value={selectedClientId}
+                  onChange={(e) => setSelectedClientId(e.target.value)}
+                  className="w-full bg-dark-700 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/40 transition-all appearance-none"
+                >
+                  <option value="new">-- New / One-off Client --</option>
+                  {clients.map(c => (
+                    <option key={c.id} value={c.id}>{c.name} {c.company ? `(${c.company})` : ""}</option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedClientId === "new" && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                    Client&apos;s State <span className="normal-case text-gray-600">(for GST calculation)</span>
+                  </label>
+                  <select
+                    value={clientStateCode}
+                    onChange={(e) => setClientStateCode(e.target.value)}
+                    className="w-full bg-dark-700 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/40 transition-all appearance-none"
+                  >
+                    <option value="">Same state as mine (intra-state)</option>
+                    {INDIAN_STATES.map((s) => (
+                      <option key={s.code} value={s.code}>{s.code} — {s.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Text Input */}

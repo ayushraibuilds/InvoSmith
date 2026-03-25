@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { FileText, Menu, X, Zap, LayoutDashboard, Settings, LogOut, User } from "lucide-react";
+import { FileText, Menu, X, Zap, LayoutDashboard, Settings, LogOut, User, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -183,6 +183,9 @@ export default function Navbar() {
             <>
               <Link href="/dashboard" className="flex items-center gap-2 text-sm text-gray-400 py-1" onClick={() => setIsOpen(false)}>
                 <LayoutDashboard className="w-4 h-4" /> Dashboard
+              </Link>
+              <Link href="/clients" className="flex items-center gap-2 text-sm text-gray-400 py-1" onClick={() => setIsOpen(false)}>
+                <Users className="w-4 h-4" /> Clients
               </Link>
               <Link href="/generate" className="block text-sm text-gray-400 py-1" onClick={() => setIsOpen(false)}>
                 Generate

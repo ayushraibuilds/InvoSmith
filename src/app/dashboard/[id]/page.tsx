@@ -118,7 +118,11 @@ export default function DocumentDetailPage() {
     <div>
       <div style="font-size:11px;text-transform:uppercase;color:#888;margin-bottom:4px;">Bill To</div>
       <div style="font-weight:600;">${data.client_name}</div>
-      ${data.client_company ? `<div style="color:#666;">${data.client_company}</div>` : ""}
+      ${data.client_company ? `<div style="color:#666;font-size:14px;">${data.client_company}</div>` : ""}
+      ${data.client_address ? `<div style="color:#666;font-size:13px;margin-top:2px;">${data.client_address}</div>` : ""}
+      ${data.client_gstin ? `<div style="color:#666;font-size:13px;margin-top:2px;">GSTIN: ${data.client_gstin}</div>` : ""}
+      ${data.client_email ? `<div style="color:#666;font-size:13px;margin-top:2px;">${data.client_email}</div>` : ""}
+      ${data.client_phone ? `<div style="color:#666;font-size:13px;margin-top:2px;">${data.client_phone}</div>` : ""}
     </div>
     <div style="text-align:right;">
       <div style="font-size:11px;text-transform:uppercase;color:#888;margin-bottom:4px;">Payment Terms</div>
@@ -366,6 +370,10 @@ export default function DocumentDetailPage() {
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Bill To</p>
               <p className="text-sm font-semibold text-white">{data.client_name}</p>
               {data.client_company && <p className="text-sm text-gray-400">{data.client_company}</p>}
+              {data.client_address && <p className="text-sm text-gray-400 mt-1 whitespace-pre-wrap">{data.client_address}</p>}
+              {data.client_gstin && <p className="text-sm text-gray-400 font-mono mt-1">GSTIN: {data.client_gstin}</p>}
+              {data.client_email && <p className="text-sm text-gray-400 mt-1">{data.client_email}</p>}
+              {data.client_phone && <p className="text-sm text-gray-400 mt-1">{data.client_phone}</p>}
             </div>
             <div className="text-right">
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Payment Terms</p>
