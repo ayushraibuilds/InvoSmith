@@ -3,13 +3,13 @@ import Razorpay from "razorpay";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || "",
-  key_secret: process.env.RAZORPAY_KEY_SECRET || "",
-});
-
 export async function POST() {
   try {
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID || "dummy_key",
+      key_secret: process.env.RAZORPAY_KEY_SECRET || "dummy_secret",
+    });
+
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -1,5 +1,5 @@
 -- =============================================
--- BillCraft — Supabase SQL Schema
+-- Invosmith — Supabase SQL Schema
 -- Run this in the Supabase SQL Editor
 -- =============================================
 

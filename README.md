@@ -1,4 +1,4 @@
-# BillCraft
+# Invosmith
 
 AI-powered invoice & proposal generator for Indian freelancers. Paste messy project notes (even in Hinglish) → get a professional, GST-compliant PDF in 60 seconds.
 
@@ -32,8 +32,8 @@ AI-powered invoice & proposal generator for Indian freelancers. Paste messy proj
 ## Quick Start
 
 ```bash
-git clone https://github.com/ayushraibuilds/billcraft.git
-cd billcraft
+git clone https://github.com/ayushraibuilds/invosmith.git
+cd invosmith
 npm install
 cp .env.example .env.local  # Add your API keys
 npm run dev

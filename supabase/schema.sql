@@ -1,5 +1,5 @@
 -- =============================================
--- BillCraft Database Schema
+-- Invosmith Database Schema
 -- =============================================
 
 -- Enable UUID extension
