@@ -386,7 +386,7 @@ export default function GeneratePage() {
                   setInputText(e.target.value);
                   setError(null);
                 }}
-                placeholder={`Describe your project here...\n\nExample: "Rohit ke liye website banaya — 3 pages, design + dev, 2 rounds revisions, 45k total, 50% advance already paid"`}
+                placeholder={`Describe your project here...\n\nExample: "${EXAMPLE_INPUTS[serviceCategory as keyof typeof EXAMPLE_INPUTS] || EXAMPLE_INPUTS.developer}"`}
                 className="w-full h-44 bg-dark-700 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 transition-all"
               />
               <div className="flex items-center justify-between mt-2">
