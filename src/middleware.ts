@@ -34,17 +34,11 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protected routes — redirect to /login if not authenticated
-  const protectedPaths = ["/dashboard", "/generate", "/settings"];
-  const isProtected = protectedPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
-
-  if (isProtected && !user) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
-  }
+  // BillCraft is a local-first application.
+  // We do NOT block unauthenticated users from using core routes 
+  // (/generate, /dashboard, /settings, /reports) since they rely on localStorage.
+  // The session is merely refreshed here so that Server Components 
+  // (if any) and the Navbar can detect if "Cloud Sync" is active.
 
   // Redirect logged-in users away from /login
   if (request.nextUrl.pathname === "/login" && user) {
