@@ -188,7 +188,7 @@ export default function DashboardPage() {
               <FileText className="w-4 h-4 text-white" />
             </div>
             <span className="text-lg font-bold text-white">
-              Bill<span className="gradient-text">Craft</span>
+              Invo<span className="gradient-text">smith</span>
             </span>
           </Link>
           <div className="flex items-center gap-3">

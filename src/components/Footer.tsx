@@ -13,7 +13,7 @@ export default function Footer() {
                 <FileText className="w-4 h-4 text-white" />
               </div>
               <span className="text-lg font-bold text-white">
-                Bill<span className="gradient-text">Craft</span>
+                Invo<span className="gradient-text">smith</span>
               </span>
             </Link>
             <p className="text-sm text-gray-500 max-w-sm leading-relaxed">
