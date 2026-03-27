@@ -3,8 +3,20 @@ import Footer from "@/components/Footer";
 import PricingCard from "@/components/PricingCard";
 
 export const metadata = {
+  metadataBase: new URL("https://invosmith.vercel.app"),
   title: "Pricing — Invosmith",
   description: "Simple, freelancer-friendly pricing. Start free, upgrade when ready.",
+  openGraph: {
+    title: "Pricing — Invosmith",
+    description: "Simple, freelancer-friendly pricing. Start free, upgrade when ready.",
+    type: "website",
+    url: "https://invosmith.vercel.app/pricing",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pricing — Invosmith",
+    description: "Simple, freelancer-friendly pricing. Start free, upgrade when ready.",
+  },
 };
 
 export default function PricingPage() {
